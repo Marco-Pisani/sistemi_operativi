@@ -21,7 +21,7 @@
 
 
 
-//ADC PORTS
+//ADC
 
 #define ADMUX  (*(unsigned char* (0x7C)))
 #define MUX0  0
@@ -56,4 +56,38 @@
 
 #define DIDR0  (*(unsigned char* (0x7E)))
 #define DIDR2  (*(unsigned char* (0x7D)))
+
+/*********TIMERS**************/
+//8-bit
+#define TCCR0A (*(unsigned char* (IO_OFFSET + 0x24)))
+#define WGM00  0
+#define WGM01  1
+#define COM0B0 4
+#define COM0B1 5
+#define COM0A0 6
+#define COM0A1 7
+
+#define TCCR0B (*(unsigned char* (IO_OFFSET + 0x25)))
+#define CS00   0
+#define CS01   1
+#define CS02   2
+#define WGM02  3
+#define FOC0B  6
+#define FOC0A  7
+
+#define TCNT0  (*(unsigned char* (IO_OFFSET + 0x26)))
+
+#define OCR0A  (*(unsigned char* (IO_OFFSET + 0x27)))
+
+#define OCR0B  (*(unsigned char* (IO_OFFSET + 0x28)))
+
+#define TIMSK0 (*(unsigned char* (				 0x6E)))
+#define TOIE0  0
+#define OCIE0A 1
+#define OCIE0B 2
+
+#define TIFR0  (*(unsigned char* (IO_OFFSET + 0x15)))
+#define TOV0   0
+#define OCF0A  1
+#define OCF0B  2
 
