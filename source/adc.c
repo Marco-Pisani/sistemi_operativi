@@ -1,4 +1,5 @@
 #include "avr_common/uart.h"
+#include "avr_common/init_functions.h"
 
 #include <util/delay.h>
 #include <stdio.h>
@@ -14,7 +15,11 @@ volatile unsigned char start_conversion = 0;
 
 unsigned char channel = 0x00;
 
+
 ISR(ADC_vect){
+
+//	ADCSRA &= ~(1 << ADIE);							//ADC interrup disable
+
 	*value_ptr = ADCL;
 	*(value_ptr+1) = ADCH;
 
@@ -22,8 +27,11 @@ ISR(ADC_vect){
 }
 
 
-ISR(TIMER0_COMPA_vect){
+ISR(TIMER1_COMPA_vect){
+
+	TIMSK1 &= ~(1 << OCIE1A);						//timer interrupt disable
 	start_conversion = 1;
+
 }
 
 
@@ -31,17 +39,19 @@ int main(void){
 
 	printf_init();
 
-	ADMUX &= ~((1 << REFS1)|(1 << REFS0));		//external Vref
-	ADCSRA |= (1 << ADEN);							//start conversion and adc enable
+	unsigned char response;
+	while((response = usart_getchar()) != '1');
 
-	TCCR0A = 0;
-	TCCR0B |= (1 << CS00)|(1 << CS02);			// clk/1024
-	OCR0A = 0x80;
+	usart_putstring("Beginning.\n");
+
+	adc_init();
+	timer1_init();
 
 	cli();
-	TIMSK0 |= (1 << OCIE0A);						//timer interrupt enable
+	TIMSK1 |= (1 << OCIE1A);						//timer interrupt enable
 	ADCSRA |= (1 << ADIE);							//ADC interrup enable
 	sei();
+
 
 	while(1){
 
@@ -58,10 +68,13 @@ int main(void){
 			ADMUX = (channel & 0x1F);
 			conversion_complete = 0;
 			start_conversion = 0;
+
+			ADCSRA |= (1 << ADIE);							//ADC interrup enable
+			TIMSK1 |= (1 << OCIE1A);						//timer interrupt enable
 		}
 
 		if(start_conversion){
-//			printf("S\n");
+
 			ADCSRA |= (1 << ADSC);
 			start_conversion = 0;
 

@@ -20,6 +20,8 @@ void usart_putchar( char data );
 void usart_pstr (char *s);
 unsigned char usart_kbhit(void);
 int usart_putchar_printf(char var, FILE *stream);
+void usart_putstring(unsigned char* buf);
+unsigned char usart_getstring(unsigned char* buf);
 
 
 static FILE mystdout = FDEV_SETUP_STREAM(usart_putchar_printf, NULL, _FDEV_SETUP_WRITE);
@@ -68,6 +70,34 @@ int usart_putchar_printf(char var, FILE *stream) {
     if (var == '\n') usart_putchar('\r');
     usart_putchar(var);
     return 0;
+}
+
+// reads a string until the first newline or 0
+// returns the size read
+unsigned char usart_getstring(unsigned char* buf){
+  uint8_t* b0=buf; //beginning of buffer
+  while(1){
+    uint8_t c=usart_getchar();
+    *buf=c;
+    ++buf;
+    // reading a 0 terminates the string
+    if (c==0)
+      return buf-b0;
+    // reading a \n  or a \r return results
+    // in forcedly terminating the string
+    if(c=='\n'||c=='\r'){
+      *buf=0;
+      ++buf;
+      return buf-b0;
+    }
+  }
+}
+
+void usart_putstring(unsigned char* buf){
+  while(*buf){
+    usart_putchar(*buf);
+    ++buf;
+  }
 }
 
 void printf_init(void){
