@@ -25,7 +25,7 @@
 # to be uploaded on the avr
 # you can add multiple files, they will be all generated
 
-BINS=adc.elf
+BINS=arduino.elf
 
 # put here the additional .o files you want to generate
 # one .c file for each .o should be present
@@ -38,7 +38,16 @@ HEADERS=arv_common/uart.h avr_common/init_functions.h
 
 include avr_common/avr.mk
 
-# !!!!!!!!!!!!!!!! MODIFY HERE !!!!!!!!!!!!!!!! 
+# PC program makefile
+
+PC_BINS=pc_functions/serial_linux.c
+
+HEADERS=pc_functions/serial_linux.h
 
 
+all: $(PC_BINS)
+	gcc -o main $(PC_BINS) main.c
+
+%.o:	pc_functions/%.c
+	gcc -c $<
 

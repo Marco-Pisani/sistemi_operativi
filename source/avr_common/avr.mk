@@ -8,6 +8,7 @@ AS_OPTS=-x assembler-with-cpp $(CC_OPTS)
 AVRDUDE=avrdude
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
+
 AVRDUDE_PORT = /dev/ttyACM0    # programmer connected to serial device
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET):i
@@ -36,8 +37,8 @@ all:	$(BINS)
 %.hex:	%.elf
 	avr-objcopy -O ihex -R .eeprom $< $@
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$@:i #$(AVRDUDE_WRITE_EEPROM)
-
+	rm -rf $(OBJS) $(BINS) *.o *.elf *.hex
 clean:
-	rm -rf $(OBJS) $(BINS) *.hex *~ *.o
+	rm -rf $(OBJS) $(BINS) *.hex *~ *.o main
 
 .SECONDARY:	$(OBJS)
