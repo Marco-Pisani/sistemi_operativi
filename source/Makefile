@@ -32,7 +32,7 @@ BINS=arduino.elf
 OBJS=avr_common/uart.o avr_common/init_functions.o
 
 # put here the additional header files needed for compilation
-HEADERS=arv_common/uart.h avr_common/init_functions.h
+HEADERS=arv_common/uart.h avr_common/init_functions.h avr_common/variables.h
 
 # the file below contains the actual rules
 

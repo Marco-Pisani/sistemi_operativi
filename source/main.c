@@ -29,18 +29,27 @@ int main(int argc, char **argv){
 
    serial_set_blocking(fd, 1);
 
-   const int bsize=10;
-   char buf[bsize];
+   const int bsize=2;
+   unsigned short buf;
+   unsigned char* ptr = (unsigned char*)&buf;
 
-	unsigned	char message = 'a';
-			write(fd, &message, 1);
+	printf("Premi un tasto per iniziare\n");
+	unsigned	char message = getchar();
+	printf("Inviato!\n");
+
+	for(int i = 0; i<5; i++){
+		message = getchar();
+		write(fd, &message, 1);
+		printf("Inviato!\n");
+	}
 
 	int j = 0;
    while (j<10000) {
-	   int   n_read=read(fd, buf, bsize);
-      for (int i=0; i<n_read; ++i) {
-         printf("%c", buf[i]);
-       }
+//	   int   n_read=read(fd, buf, bsize);
+
+		read(fd, ptr, 1);
+		read(fd, ptr+1, 1);
+      printf("%x\n", buf);
    }
 
    close(fd);

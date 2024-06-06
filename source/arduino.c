@@ -1,13 +1,8 @@
-#include <util/delay.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/power.h>
-#include <avr/sleep.h>
+#include "avr_common/init_functions.h"
 
 #include "avr_common/uart.h"
-#include "avr_common/init_functions.h"
+
+#include <util/delay.h>
 
 unsigned short value = 0;
 unsigned char* value_ptr = (unsigned char*)(&value);
@@ -15,12 +10,21 @@ unsigned char* value_ptr = (unsigned char*)(&value);
 unsigned char conversion_complete = 0;
 volatile unsigned char start_conversion = 0;
 
-unsigned char begin = 0;
-unsigned char buffer;
+unsigned char start = 0;
+unsigned char n = 0;
+
+
+enum state_variable{
+
+	IDLE_STATE,						//waiting for the trigger
+	SAMPLING_STATE,				//sampling signals
+	SENDING_STATE					//sending to pc
+}state;
+
 
 ISR(ADC_vect){
 
-//	ADCSRA &= ~(1 << ADIE);							//ADC interrup disable
+	ADCSRA &= ~(1 << ADIE);							//ADC interrup disable
 
 	*value_ptr = ADCL;
 	*(value_ptr+1) = ADCH;
@@ -33,70 +37,87 @@ ISR(TIMER1_COMPA_vect){
 
 	TIMSK1 &= ~(1 << OCIE1A);						//timer interrupt disable
 	start_conversion = 1;
-
 }
 
 ISR(USART0_RX_vect){
 
-	begin++;
-	buffer = UDR0;
-	printf("ricevuto: %c %d\n", buffer, begin);
+	buffer[n] = UDR0;
+	n++;
 }
 
+ISR(USART0_UDRE_vect){
+
+	sent=1;
+
+}
 
 
 int main(void){
 
-	printf_init();
+	usart_init();
 
 	DDRB |= 1 << 7;	//builtin led
 	PORTB = 0;
-
 	sei();
-//	while(begin == 0);
-//		 sleep_mode();
 
-//	sleep_disable();
-
-	PORTB |= 1 << 7;	//led on when waken up
-
-	adc_init();
-	timer1_init();
-
-	cli();
-	TIMSK1 |= (1 << OCIE1A);						//timer interrupt enable
-	ADCSRA |= (1 << ADIE);							//ADC interrup enable
-	sei();
 
 
 	while(1){
 
+		if(n == 0){
 
-		if(conversion_complete){
+			PORTB |= 1 << 7;
+			_delay_ms(1000);
+			PORTB &= ~(1 << 7);
+			_delay_ms(1000);
+		}
 
-//			printf("%d\tchannel:%d\n", value, channel);
-			printf("%d\n", value);
+		if(n == 1){
 
-//			if(channel == 0)
-//				channel = 0x01;
-//			else
-//				channel = 0x00;
+			PORTB |= 1 << 7;	//led on when waken up
 
-//			ADMUX = (channel & 0x1F);
-			conversion_complete = 0;
-			start_conversion = 0;
+			cli();
+			adc_init();
+			timer1_init();
+			sei();
 
-			ADCSRA |= (1 << ADIE);							//ADC interrup enable
 			TIMSK1 |= (1 << OCIE1A);						//timer interrupt enable
+			ADCSRA |= (1 << ADIE);							//ADC interrup enable
+
+			start = 1;
+
+			for(int i = 0; i<20; i++){
+				PORTB |= 1 << 7;
+				_delay_ms(100);
+				PORTB &= ~(1 << 7);
+				_delay_ms(100);
+			}
 		}
 
-		if(start_conversion){
+		if(n == 2){
 
-			ADCSRA |= (1 << ADSC);
-			start_conversion = 0;
+			PORTB &= ~(1 << 7);
+
+			if(conversion_complete){
+
+				usart_putchar( (unsigned char)(*(value_ptr)) );
+				usart_putchar( (unsigned char)(*(value_ptr+1)) );
+				usart_putchar('\n');
+
+				conversion_complete = 0;
+				start_conversion = 0;
+
+				ADCSRA |= (1 << ADIE);							//ADC interrup enable
+				TIMSK1 |= (1 << OCIE1A);						//timer interrupt enable
+			}
+
+			if(start_conversion){
+
+				ADCSRA |= (1 << ADSC);
+				start_conversion = 0;
+
+			}
 
 		}
-
 	}
-
 }

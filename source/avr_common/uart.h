@@ -1,13 +1,26 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdio.h>
+#include <stdbool.h>
 #pragma once
 
-void printf_init(void);
-void usart_init(uint16_t ubrr);
-char usart_getchar( void );
-void usart_putchar( char data );
-void usart_pstr (char *s);
-unsigned char usart_kbhit(void);
-int usart_putchar_printf(char var, FILE *stream);
-void usart_putstring(unsigned char* buf);
-unsigned char usart_getstring(unsigned char* buf);
+#define BAUD 19200
+#define MYUBRR (F_CPU/16/BAUD-1)
+
+#define BUFF_SIZE 10
+
+extern unsigned char buffer[BUFF_SIZE];
+extern unsigned char sent;
+
+
+void usart_init(void);
+void usart_putchar(char c);
+void usart_putstring(char* buf);
+char usart_getchar(void);
+
+
+
+
+
+
