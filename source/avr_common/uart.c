@@ -1,7 +1,5 @@
 #include "uart.h"
 
-unsigned char buffer[BUFF_SIZE];
-unsigned char sent = 1;
 
 void usart_init() {
     // Set baud rate
@@ -18,12 +16,11 @@ void usart_init() {
 
 
 void usart_putchar(char data) {
-//    while ( !(UCSR0A & (1 << UDRE0)) );
+    while ( !(UCSR0A & (1 << UDRE0)) );
 //    while ( sent == 0 );
 
     UDR0 = data;
 
-    sent = 0;
 
 }
 

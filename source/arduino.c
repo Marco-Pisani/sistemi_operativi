@@ -9,9 +9,10 @@ unsigned short value = 0;
 unsigned char* value_ptr = (unsigned char*)(&value);
 
 unsigned char conversion_complete = 0;
-volatile unsigned char start_conversion = 0;
+unsigned char start_conversion = 0;
 
 unsigned char n = 0;			//numero di byte ricevuti
+unsigned char uart_buffer[BUFF_SIZE];
 
 enum state_variable{
 
@@ -19,15 +20,15 @@ enum state_variable{
 	W8_FOR_SAMPLE_RATE_STATE,	//waiting for sample rate
 	W8_FOR_MODE_STATE,			//waiting for continuous sampling or buffered mode
 	W8_FOR_TRIGGER_STATE,		//waiting for the trigger
-	CONT_SAMPLING_STATE,			//continuos sampling
-	BUFF_SAMPLING_STATE,			//buffered 	sampling
-	SENDING_STATE					//sending 	to pc
+	SAMPLING_STATE,				//sampling
+	END_STATE
 
 }state;
 
-adc_settings adc;			//struct per le impostazioni dell'adc
-unsigned int n_samples;	//numero di campioni
+adc_settings adc;						//struct per le impostazioni dell'adc
+unsigned int n_samples = 0;		//numero di campioni
 unsigned int max_samples = 1000;
+unsigned short* sample_buffer;	//per la modalità buffered
 
 ISR(ADC_vect){
 
@@ -46,22 +47,19 @@ ISR(TIMER1_COMPA_vect){
 
 ISR(USART0_RX_vect){
 
-	buffer[n] = UDR0;
+	uart_buffer[n] = UDR0;
 	n++;
 }
 
 ISR(USART0_UDRE_vect){
 
-	sent=1;
 }
 
 
 int main(void){
 
 	state = W8_FOR_CHANNELS_STATE;
-
 	usart_init();
-
 	DDRB = 0xF0;	//builtin led and 3 LEDs for state
 	unsigned char state_leds = 0x00;
 	sei();
@@ -76,7 +74,7 @@ int main(void){
 			case W8_FOR_CHANNELS_STATE:
 				if(n == 1){
 					//impostare i canali
-					adc.channels = buffer[0];
+					adc.channels = uart_buffer[0];
 					adc_init();
 					state = W8_FOR_SAMPLE_RATE_STATE;
 				}
@@ -89,7 +87,7 @@ int main(void){
 				if(n == 3){
 					//impostare il timer
 
-					adc.timer_value = buffer[1] | (buffer[2] << 8);
+					adc.timer_value = uart_buffer[1] | (uart_buffer[2] << 8);
 					timer1_init(adc.timer_value);
 
 					state = W8_FOR_MODE_STATE;
@@ -99,9 +97,19 @@ int main(void){
 
 
 			case W8_FOR_MODE_STATE:
+
 				if(n == 4){
-					//impostare la modalità di sampling
-					adc.sampling_mode = buffer[3];
+
+					adc.sampling_mode = uart_buffer[3];
+
+					if(adc.sampling_mode){
+						sample_buffer = (unsigned short*)malloc(sizeof(unsigned short)*n_samples);
+						adc.sample_func = buffered_sampling;
+					}
+					else{
+						adc.sample_func = continuos_sampling;
+					}
+
 					state = W8_FOR_TRIGGER_STATE;
 				}
 				state_leds = 0x30;
@@ -114,57 +122,59 @@ int main(void){
 					TIMSK1 |= (1 << OCIE1A);		//timer interrupt enable
 					ADCSRA |= (1 << ADIE);			//ADC interrup enable
 
-					state = CONT_SAMPLING_STATE;
+					state = SAMPLING_STATE;
 				}
 				state_leds = 0x40;
 				break;
 
 
-			case CONT_SAMPLING_STATE:
+			case SAMPLING_STATE:
 
 				if(conversion_complete){
 
-					usart_putchar( (unsigned char)(*(value_ptr)) );
-					usart_putchar( (unsigned char)(*(value_ptr+1)) );
+					adc.sample_func();
 
-					ADCSRA |= (1 << ADIE);			//ADC interrup enable
-					TIMSK1 |= (1 << OCIE1A);		//timer interrupt enable
+   				ADCSRA |= (1 << ADIE);        //ADC interrup enable
+   				TIMSK1 |= (1 << OCIE1A);      //timer interrupt enable
 
-					n_samples++;
-					conversion_complete = 0;
-					start_conversion = 0;
+   				n_samples++;
+   				conversion_complete = 0;
+   				start_conversion = 0;
 				}
 
 				if(start_conversion){
 
-					ADCSRA |= (1 << ADSC);			//starts the conversion
-					start_conversion = 0;
+   				ADCSRA |= (1 << ADSC);        //starts the conversion
+   				start_conversion = 0;
 				}
 
 				//quando smettere
-				if(n_samples > max_samples){
-					TIMSK1 &= ~(1 << OCIE1A);		//timer interrupt disable
-					ADCSRA &= ~(1 << ADIE);			//ADC interrup disable
-
-					state = SENDING_STATE;
+				if(n_samples >= max_samples){
+   				TIMSK1 &= ~(1 << OCIE1A);     //timer interrupt disable
+   				ADCSRA &= ~(1 << ADIE);       //ADC interrup disable
+					state = END_STATE;
 				}
 
 				state_leds = 0x50;
 				break;
 
 
-			case BUFF_SAMPLING_STATE:
+			case END_STATE:
 
-				state_leds = 0x60;
-				break;
 
-			case SENDING_STATE:
+				if(adc.sampling_mode){
+					value_ptr = (unsigned char*)sample_buffer;
+					for(int i = 0; i < n_samples; value_ptr++, i++){
+						usart_putchar((*value_ptr));
+					}
+				}
 
 				usart_putchar( (unsigned char)0xFF);
 				usart_putchar( (unsigned char)0xFF);
 
 
 				state_leds = 0x70;
+				state = W8_FOR_CHANNELS_STATE;
 				break;
 
 		}

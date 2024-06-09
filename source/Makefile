@@ -29,7 +29,7 @@ BINS=arduino.elf
 
 # put here the additional .o files you want to generate
 # one .c file for each .o should be present
-OBJS=avr_common/uart.o avr_common/init_functions.o
+OBJS=avr_common/uart.o avr_common/init_functions.o avr_common/adc.o
 
 # put here the additional header files needed for compilation
 HEADERS=arv_common/uart.h avr_common/init_functions.h avr_common/variables.h avr_common/adc.h

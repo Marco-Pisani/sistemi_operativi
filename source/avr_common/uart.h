@@ -10,8 +10,6 @@
 
 #define BUFF_SIZE 10
 
-extern unsigned char buffer[BUFF_SIZE];
-extern unsigned char sent;
 
 
 void usart_init(void);
