@@ -37,7 +37,7 @@ all:	$(BINS)
 %.hex:	%.elf
 	avr-objcopy -O ihex -R .eeprom $< $@
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$@:i #$(AVRDUDE_WRITE_EEPROM)
-	rm -rf $(OBJS) $(BINS) *.o *.elf *.hex
+#	rm -rf $(OBJS) $(BINS) *.o *.elf *.hex
 clean:
 	rm -rf $(OBJS) $(BINS) *.hex *~ *.o main
 
