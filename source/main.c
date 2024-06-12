@@ -1,10 +1,12 @@
 
+
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "pc_functions/serial_linux.h"
+
 
 int main(int argc, char **argv){
 
@@ -30,6 +32,7 @@ int main(int argc, char **argv){
 
 	unsigned int max_samples = 200;
 	unsigned char n_channels;
+	unsigned char speed;
 	float period;
 	float t_min;
 	unsigned char sampling_mode;
@@ -38,7 +41,7 @@ int main(int argc, char **argv){
 	printf("1)	Inserire numero di canali da utilizzare.\n");
 	n_channels = getchar();
 	n_channels = n_channels - '1';
-	printf("inviato 0x%x\n", n_channels);
+	printf("inviato 0x%x\n\n", n_channels);
 
 	status = write(fd, &n_channels, 1);
 	while(getchar() != '\n');
@@ -50,9 +53,24 @@ int main(int argc, char **argv){
 
 
 
+	//		SPEED
+	printf("2)	Inserire la risoluzione (0 --> 10-bit;	1 --> 8-bit)\n");
+	speed = getchar();
+	while(getchar() != '\n');
+
+	speed = speed - '0';
+	printf("Invio: 0x%x\n\n", speed);
+
+	status = write(fd, &speed, 1);
+	if(status == -1){
+		printf("ERRORE DURANTE L'INVIO DELLA MODALITÀ DI FUNZIONAMENTO.\n");
+		return -1;
+	}
+
+
 
 	//MODALITÀ DI FUNZIONAMENTO
-	printf("2)	Inserire modalità di funzionamento (0 --> continuos; 1 --> buffered).\n");
+	printf("3)	Inserire modalità di funzionamento (0 --> continuos; 1 --> buffered).\n");
 	sampling_mode = getchar();
 
 
@@ -61,7 +79,7 @@ int main(int argc, char **argv){
 		return -1;
 	}
 	sampling_mode = sampling_mode - '0';
-	printf("Invio: %x\n", sampling_mode);
+	printf("Invio: %x\n\n", sampling_mode);
 
 	status = write(fd, &sampling_mode, 1);
 	while(getchar() != '\n');
@@ -70,26 +88,33 @@ int main(int argc, char **argv){
 		return -1;
 	}
 
-
 	if(sampling_mode){
-		t_min = 100.0;		//in us
+		if(speed)
+			t_min = 20.0;		//in us
+		else
+			t_min = 20.0;
 	}
 	else{
-		t_min = 1020.0;		//in us
+		if(speed)
+			t_min = 550.0;		//in us
+		else
+			t_min = 1020.0;
 	}
+
+
 
 
 	//FREQUENZA DI CAMPIONAMENTO
-	printf("3)	Inserire periodo di campionamento di campionamento in us.\n");
+	printf("4)	Inserire periodo di campionamento di campionamento in us.\n");
 	printf("Minimo: %f us, Max: 32000 us\n", t_min);
 
 	scanf("%f", &period);
-
+/*
 	if(period < t_min || period > 32000.0){
 		printf("ERRORE VALORE NON VALIDO\n");
 		return -1;
 	}
-
+*/
 	unsigned short sample_rate = (unsigned short)((period/100)*200);
 	printf("Periodo calcolato: 0x%x, %u\n", sample_rate, sample_rate);
 	unsigned char* p = (unsigned char*)&sample_rate;
@@ -99,8 +124,7 @@ int main(int argc, char **argv){
 		printf("ERRORE DURANTE L'INVIO DEL PERIODO(1).\n");
 		return -1;
 	}
-	printf("Invio 0x%x\n", *p);
-	printf("Invio 0x%x\n", *(p+1));
+	printf("Invio 0x%x\n\n", sample_rate);
 
 
 	status = write(fd, p+1, 1);		//Higher byte
@@ -115,7 +139,7 @@ int main(int argc, char **argv){
 
 
 	//TRIGGER
-	printf("4)	Inserire 1 per far partire l'accrocco.\n");
+	printf("5)	Inserire 1 per far partire l'accrocco.\n");
 	unsigned char ready = getchar();
 	write(fd, &ready, 1);
 	while(getchar() != '\n');
@@ -133,32 +157,30 @@ int main(int argc, char **argv){
 	unsigned short test_variable;
 	unsigned char* test_variable_ptr = (unsigned char*)&test_variable;
 
-//		read(fd, ptr, 1);
-//		read(fd, ptr+1, 1);
-
-//	printf("Valore del timer: 0x%x, 0x%x\n", *ptr, *(ptr+1));
+	int n_samples = 0;
 
    while(1) {
 
 		read(fd, ptr, 1);
-		read(fd, ptr+1, 1);
+
+		if(!speed)
+			read(fd, ptr+1, 1);
 
 
 		fprintf(fp, "%x\n", buf);
+		n_samples++;
+
+#if TEST
+     	printf("%x\t", buf);
+		read(fd, test_variable_ptr, 1);
+		read(fd, test_variable_ptr+1, 1);
+		printf("%u\tnumero campione\n", test_variable);
+#else
      	printf("%x\n", buf);
+#endif
 
-
-		//può al massimo inviare 0x3F
-     	if(buf > 0xF000){
+		if(n_samples >= MAX_SAMPLES)
 			break;
-	 	}
-//		read(fd, test_variable_ptr, 1);
-//		read(fd, test_variable_ptr+1, 1);
-//		read(fd, test_variable_ptr, 1);
-//		read(fd, test_variable_ptr+1, 1);
-//		read(fd, test_variable_ptr, 1);
-//		read(fd, test_variable_ptr+1, 1);
-//		printf("%u\tnumero campione\n", test_variable);
 
   	}
 

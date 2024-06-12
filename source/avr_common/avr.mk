@@ -2,7 +2,7 @@
 CC=avr-gcc
 AS=avr-gcc
 INCLUDE_DIRS=-I. -I../avr_common
-CC_OPTS=-Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char -funsigned-bitfields  -fshort-enums -Wall -Wstrict-prototypes -mmcu=atmega2560 $(INCLUDE_DIRS)  -D__AVR_3_BYTE_PC__ -D__ATMEGA2560__
+CC_OPTS=-Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char -funsigned-bitfields  -fshort-enums -Wall -Wstrict-prototypes -mmcu=atmega2560 $(INCLUDE_DIRS)  -D__AVR_3_BYTE_PC__ -D__ATMEGA2560__ -DTEST=$(TEST) -DBUFFERED=$(BUFFERED) -DMAX_SAMPLES=$(MAX_SAMPLES)
 AS_OPTS=-x assembler-with-cpp $(CC_OPTS)
 
 AVRDUDE=avrdude

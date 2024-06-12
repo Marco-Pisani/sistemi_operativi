@@ -17,6 +17,7 @@ extern unsigned char conversion_complete;
 extern unsigned char start_conversion;
 
 extern adc_settings adc;
+extern unsigned char * sample_buffer_speed;
 extern unsigned short* sample_buffer;
 extern unsigned int n_samples;
 extern unsigned int max_samples;
@@ -26,3 +27,5 @@ extern unsigned char* value_ptr;
 
 void continuos_sampling(void);
 void buffered_sampling(void);
+void continuos_sampling_speed(void);
+void buffered_sampling_speed(void);

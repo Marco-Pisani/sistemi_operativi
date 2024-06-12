@@ -28,6 +28,11 @@ valori continuos
 	clk/8		0x0800
 
 	con clk/8 da 1 ms (0x0800, 1 kHz) a 0.033 s (0xFFFF, 30 Hz) di periodo
+
+
+modalità veloce
+	clk/8		0x0028		20 us
+
 ****************/
 
 void adc_init(void){
@@ -49,7 +54,7 @@ void timer1_init(unsigned short sample_rate){
 
 	OCR1A = (unsigned short)sample_rate;
 
-
+	DIDR0 = 0x00;
 	TCCR1B |= (1 << CS11);        // clk/1
 
 }
