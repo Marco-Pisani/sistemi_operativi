@@ -8,31 +8,32 @@
 unsigned short value = 0x0000;
 unsigned char* value_ptr = (unsigned char*)(&value);
 
+//indicano rispettivamente se la conversione è terminata e se iniziarla
 unsigned char conversion_complete = 0;
 unsigned char start_conversion = 0;
 
-unsigned char n = 0;			//numero di byte ricevuti
-unsigned char uart_buffer[BUFF_SIZE];
+unsigned char n = 0;				//numero di byte ricevuti
+unsigned char uart_buffer[BUFF_SIZE];		//buffer dei dati ricevuti
 
 
 enum state_variable{
 
-	W8_FOR_CHANNELS_STATE,		//waiting for number of channels
+	W8_FOR_CHANNELS_STATE,			//waiting for number of channels
 	W8_FOR_MODE_STATE,			//waiting for continuous sampling or buffered mode
 	W8_FOR_SPEED_STATE,			//waiting for speed factor
-	W8_FOR_SAMPLE_RATE_STATE,	//waiting for sample rate
-	W8_FOR_TRIGGER_STATE,		//waiting for the trigger
+	W8_FOR_SAMPLE_RATE_STATE,		//waiting for sample rate
+	W8_FOR_TRIGGER_STATE,			//waiting for the trigger
 	SAMPLING_STATE,				//sampling
 	END_STATE
 }state;
 
-adc_settings adc;						//struct per le impostazioni dell'adc
-unsigned int n_samples = 0;		//numero di campioni
+adc_settings adc;				//struct per le impostazioni dell'adc
+unsigned int n_samples = 0;			//numero di campioni attualmente presenti
 unsigned int max_samples = MAX_SAMPLES;
 unsigned short* sample_buffer;			//per la modalità buffered
-unsigned char * sample_buffer_speed;	//per buffered a 8-bit
-unsigned char current_channel = 0;
-unsigned char speed = 0;				//per sapere se usare 8-bit o 10-bit
+unsigned char * sample_buffer_speed;		//per buffered a 8-bit
+unsigned char current_channel = 0;		//canale attualmente in utilizzo
+unsigned char speed = 0;			//per sapere se usare 8-bit o 10-bit
 
 #if TEST
 unsigned short* test_buffer;
@@ -46,7 +47,7 @@ unsigned char* test_variable_ptr = (unsigned char*)&test_variable;
 
 ISR(ADC_vect){
 
-	ADCSRA &= ~(1 << ADIE);							//ADC interrup disable
+	ADCSRA &= ~(1 << ADIE);				//ADC interrup disable
 	conversion_complete = 1;
 }
 
@@ -54,7 +55,7 @@ ISR(ADC_vect){
 ISR(TIMER1_COMPA_vect){
 
 	#if !TEST
-		TIMSK1 &= ~(1 << OCIE1A);						//timer interrupt disable
+		TIMSK1 &= ~(1 << OCIE1A);		//timer interrupt disable
 	#endif
 
 	start_conversion = 1;
@@ -75,7 +76,7 @@ int main(void){
 
 	state = W8_FOR_CHANNELS_STATE;
 	usart_init();
-	DDRB = 0xF0;	//builtin led and 3 LEDs for state
+	DDRB = 0xF0;							//builtin led and 3 LEDs for state
 	unsigned char state_leds = 0x00;
 	sei();
 
@@ -91,6 +92,8 @@ int main(void){
 				adc.sampling_mode = 0x0;
 				adc.sample_func	= NULL;
 				speed					= 0x0;
+  				TIMSK1 &= ~(1 << OCIE1A);     //timer interrupt disable
+  				ADCSRA &= ~(1 << ADIE);       //ADC interrup disable
 
 				if(n == 1){
 
@@ -123,6 +126,7 @@ int main(void){
 
 					adc.sampling_mode = uart_buffer[2];
 
+					//in base alla modalità e al numero di bit usati si userà una funzione diversa
 					if(adc.sampling_mode){
 
 						if(speed){
@@ -146,7 +150,7 @@ int main(void){
 					}
 
 					#if TEST
-						test_buffer = (unsigned short*)malloc(sizeof(unsigned short)*max_samples);
+					test_buffer = (unsigned short*)malloc(sizeof(unsigned short)*max_samples);
 					#endif
 
 					state = W8_FOR_SAMPLE_RATE_STATE;
@@ -185,27 +189,28 @@ int main(void){
 				break;
 
 
+
 			case SAMPLING_STATE:
 
 				if(conversion_complete){
 
 					adc.sample_func();
 
-					//segna il numero di interrupt del timer
 //					usart_putchar(0x00);
 //					usart_putchar(0x00);
 //					usart_putchar(0x00);
 //					usart_putchar(0x00);
 
-#if TEST
-	#if BUFFERED
+					#if TEST
+					#if BUFFERED
 					test_buffer[n_samples] = test_variable;
-	#else
+					#else
 					usart_putchar(*test_variable_ptr);
 					usart_putchar(*(test_variable_ptr+1));
-	#endif
-#endif
+					#endif
+					#endif
 
+					//cambio canale. tiene conto della risoluzione
 					current_channel = (current_channel == adc.channels) ? 0x00 : ++current_channel;
 					ADMUX = (speed << ADLAR)|(current_channel & 0x07);
 
@@ -234,14 +239,15 @@ int main(void){
 				break;
 
 
-			case END_STATE:
 
+			case END_STATE:
+				//se buffered manda i valori
 				if(adc.sampling_mode){
 
 					#if TEST
-						#if BUFFERED
-							test_variable_ptr = (unsigned char*)test_buffer;
-						#endif
+					#if BUFFERED
+					test_variable_ptr = (unsigned char*)test_buffer;
+					#endif
 					#endif
 
 					if(speed){
@@ -254,9 +260,9 @@ int main(void){
 
 							#if TEST
 							#if BUFFERED
-								usart_putchar(*test_variable_ptr);
-								usart_putchar(*(test_variable_ptr+1));
-								test_variable_ptr+=2;
+							usart_putchar(*test_variable_ptr);
+							usart_putchar(*(test_variable_ptr+1));
+							test_variable_ptr+=2;
 							#endif
 							#endif
 						}
@@ -271,9 +277,9 @@ int main(void){
 
 							#if TEST
 							#if BUFFERED
-								usart_putchar(*test_variable_ptr);
-								usart_putchar(*(test_variable_ptr+1));
-								test_variable_ptr+=2;
+							usart_putchar(*test_variable_ptr);
+							usart_putchar(*(test_variable_ptr+1));
+							test_variable_ptr+=2;
 							#endif
 							#endif
 						}
@@ -283,15 +289,11 @@ int main(void){
 					free(sample_buffer_speed);
 
 					#if TEST
-						#if BUFFERED
-							free(test_buffer);
-						#endif
+					#if BUFFERED
+					free(test_buffer);
+					#endif
 					#endif
 				}
-
-
-				usart_putchar( (unsigned char)0xFF);
-				usart_putchar( (unsigned char)0xFF);
 
 
 				state_leds = 0x70;
