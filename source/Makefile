@@ -37,7 +37,7 @@ TEST=0
 BUFFERED=1
 
 # number of samples per run (total)
-MAX_SAMPLES=110
+MAX_SAMPLES=720
 
 # put here the file containing the main routine
 # to be uploaded on the avr

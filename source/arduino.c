@@ -28,7 +28,7 @@ enum state_variable{
 
 adc_settings adc;						//struct per le impostazioni dell'adc
 unsigned int n_samples = 0;		//numero di campioni
-unsigned int max_samples = 120;
+unsigned int max_samples = MAX_SAMPLES;
 unsigned short* sample_buffer;			//per la modalità buffered
 unsigned char * sample_buffer_speed;	//per buffered a 8-bit
 unsigned char current_channel = 0;
@@ -173,7 +173,7 @@ int main(void){
 
 
 			case W8_FOR_TRIGGER_STATE:
-				if(n == 5){
+				if(n == 6){
 
 					TIMSK1 |= (1 << OCIE1A);		//timer interrupt enable
 					ADCSRA |= (1 << ADIE);			//ADC interrup enable

@@ -73,7 +73,6 @@ int main(int argc, char **argv){
 	printf("3)	Inserire modalità di funzionamento (0 --> continuos; 1 --> buffered).\n");
 	sampling_mode = getchar();
 
-
 	if(sampling_mode != '0' && sampling_mode != '1'){
 		printf("Valore non valido.\n");
 		return -1;
@@ -109,12 +108,12 @@ int main(int argc, char **argv){
 	printf("Minimo: %f us, Max: 32000 us\n", t_min);
 
 	scanf("%f", &period);
-/*
+
 	if(period < t_min || period > 32000.0){
 		printf("ERRORE VALORE NON VALIDO\n");
 		return -1;
 	}
-*/
+
 	unsigned short sample_rate = (unsigned short)((period/100)*200);
 	printf("Periodo calcolato: 0x%x, %u\n", sample_rate, sample_rate);
 	unsigned char* p = (unsigned char*)&sample_rate;
@@ -126,13 +125,11 @@ int main(int argc, char **argv){
 	}
 	printf("Invio 0x%x\n\n", sample_rate);
 
-
 	status = write(fd, p+1, 1);		//Higher byte
 	if(status == -1){
 		printf("ERRORE DURANTE L'INVIO DEL PERIODO(2).\n");
 		return -1;
 	}
-
 	while(getchar() != '\n');
 
 
@@ -145,8 +142,10 @@ int main(int argc, char **argv){
 	while(getchar() != '\n');
 
 
+
+
 	FILE* fp;
-	if( !(fp = fopen("output.txt", "w+")) ){
+	if( !(fp = fopen("output_files/output.txt", "w+")) ){
 		printf("ERRORE DURANTE L'APERTURA DEL FILE DI OUTPUT.\n");
 		return -1;
 	}
@@ -158,6 +157,12 @@ int main(int argc, char **argv){
 	unsigned char* test_variable_ptr = (unsigned char*)&test_variable;
 
 	int n_samples = 0;
+	int current_channel = 0;
+
+	unsigned short* samples_buffer;
+	samples_buffer = (unsigned short*)malloc(MAX_SAMPLES*sizeof(unsigned short));
+
+
 
    while(1) {
 
@@ -166,26 +171,38 @@ int main(int argc, char **argv){
 		if(!speed)
 			read(fd, ptr+1, 1);
 
+		samples_buffer[n_samples] = buf;
 
-		fprintf(fp, "%x\n", buf);
 		n_samples++;
 
-#if TEST
-     	printf("%x\t", buf);
+		#if TEST
+     	printf("%d\t", buf);
 		read(fd, test_variable_ptr, 1);
 		read(fd, test_variable_ptr+1, 1);
 		printf("%u\tnumero campione\n", test_variable);
-#else
-     	printf("%x\n", buf);
-#endif
+		#endif
+
+		current_channel++;
+		if(current_channel > n_channels){
+			current_channel = 0;
+		}
 
 		if(n_samples >= MAX_SAMPLES)
 			break;
 
   	}
 
+	float conversion_value = (speed) ? 255 : 1023;
+	float pippo;
+	for(int j = 0; j<n_channels+1; j++){
+		for(int i = j, k = 1; i< MAX_SAMPLES; i+=(n_channels+1), k++ ){
+			pippo = (((float)samples_buffer[i])/conversion_value)*5.0;
+			fprintf(fp, "%d %f\n", k, pippo);
+		}
+		fprintf(fp, "\n\n");
+	}
 	printf("Fine.\n");
    close(fd);
-
-	return 0;
+	fclose(fp);
+	return n_channels;
 }
