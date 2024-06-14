@@ -39,6 +39,6 @@ all:	$(BINS)
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$@:i #$(AVRDUDE_WRITE_EEPROM)
 #	rm -rf $(OBJS) $(BINS) *.o *.elf *.hex
 clean:
-	rm -rf $(OBJS) $(BINS) *.hex *~ *.o main
+	rm -rf $(OBJS) $(BINS) *.hex *~ *.o main output_files/image.png output_files/output.txt
 
 .SECONDARY:	$(OBJS)
