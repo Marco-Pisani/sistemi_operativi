@@ -11,6 +11,7 @@ file="/dev/$file"
 status=$?
 if (($status != 0))
 then
+	echo ERROR
 	exit -1
 fi
 

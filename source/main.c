@@ -204,5 +204,5 @@ int main(int argc, char **argv){
 	printf("Fine.\n");
    close(fd);
 	fclose(fp);
-	return n_channels;
+	return 0;
 }
